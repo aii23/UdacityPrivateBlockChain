@@ -70,6 +70,14 @@ class Blockchain {
             block.height = self.height;
             block.hash = SHA256(JSON.stringify(block)).toString();
             self.chain.push(block);
+
+            let validationResult = self.validateChain();
+            if (validationResult.length > 0) {
+                self.height -= 1;
+                self.chain.pop();
+                reject(`Cannot add block. Validation is not passed. Reason: \n${validationResult}`);
+            }
+
             resolve(block);
         });
     }
@@ -128,7 +136,8 @@ class Blockchain {
 
                 let block = new BlockClass.Block(data);
                 self._addBlock(block)
-                .then(resolve(block));
+                .then(resolve(block))
+                .catch(e => reject(e));
             } catch(e) {
                 console.log(e);
                 reject(`Cannot submit star. Reason: ${e.message}`);
@@ -145,12 +154,8 @@ class Blockchain {
     getBlockByHash(hash) {
         let self = this;
         return new Promise((resolve, reject) => {
-            let result = self.chain.filter((elem) => elem.hash == hash)[0];
-            if (result) {
-                resolve(result);
-            } else {
-                reject(`No block with hash ${hash}`);
-            }
+            let block = self.chain.filter((elem) => elem.hash == hash)[0];
+            resolve(block);
         });
     }
 
@@ -163,11 +168,7 @@ class Blockchain {
         let self = this;
         return new Promise((resolve, reject) => {
             let block = self.chain.filter(p => p.height === height)[0];
-            if(block){
-                resolve(block);
-            } else {
-                resolve(`No block with height ${height}`);
-            }
+            resolve(block);
         });
     }
 
@@ -217,7 +218,7 @@ class Blockchain {
                         errorLog.push(`System Error ${error.name} : ${error.message}`))
             );
 
-            Promise.all(validationArray).then(() => resolve(errLog));
+            Promise.all(validationArray).then(() => resolve(errorLog));
         });
     }
 
